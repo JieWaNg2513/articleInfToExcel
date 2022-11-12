@@ -4,6 +4,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class txtToexcelUtils {
@@ -45,67 +46,62 @@ public class txtToexcelUtils {
      */
     public List<Article> getArticle(String content) throws IOException {
         List<Article> lists = new ArrayList<>();
+        int cnt = 0;
         BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(content.getBytes(Charset.forName("utf8"))), Charset.forName("utf8")));
         String line;
-        StringBuffer strbuf = new StringBuffer();
-        int index = -3;//统计记录了几个空行。
+        int arrindex = 0;//统计记录了几个空行。
         Article article = new Article();
+        StringBuilder[] contents = new StringBuilder[7];//数组 存储7个信息
+        StringBuilder inf = new StringBuilder();//存储多行信息
+        line = br.readLine();
         while ((line = br.readLine()) != null) {
 
-            if (line.trim().equals("")) { //统计空行的数量
-                if (index == 6) {
-                    lists.add(article);
-                    article = new Article();
-                    index = -1;
-                }else{
-                    index++;
-                }
-
+            if (!line.trim().equals("")) { //不为空行
+                inf.append(line);
             }else {
-                switch (index) {
-                    case 0:
-                        article.setJournalInf(line);
-                        break;
-                    case 1:
-                        article.setTitle(line);
-                        break;
-                    case 2:
-                        article.setAuthors(line);
-                        break;
-                    case 3:
-                        article.setAuthorsInf(article.getAuthorsInf().append(line));
-//                        System.out.println("111");
-//                        System.out.println(article.getAuthorsInf());
-                        break;
-                    case 4:
-                        article.articleAbs.append(line);
-                        break;
-                    case 5:
-                        if (line.startsWith("DOI")) {
-                            article.setDoi(article.getDoi().append(line));
-                        } else if (line.startsWith("PMCID")) {
-                            article.setPmcid(article.getPmcid().append(line));
-                        } else if (line.startsWith("PMID")) {
-                            article.setPmid(article.getPmid().append(line));
-                        }
-                        break;
-                    case 6:
-                        article.cois.append(line);
-                        break;
-//                    case 7:
-//                        lists.add(article);
-//                        article = new Article();
-//                        index = -2;
-//                        break;
+                if (arrindex != 6) {
+                    contents[arrindex] = new StringBuilder(inf);
+                    inf = new StringBuilder();
+                    arrindex++;
+                }else{
+                    if (arrindex == 5 && !(new StringBuilder(inf).substring(0,3).equals("DOI"))) {
+                        inf = new StringBuilder();
+                        continue;
+                    }else{
+                        contents[arrindex] = new StringBuilder(inf);
+                        inf = new StringBuilder();
+                        arrindex = 0;
+                        line = br.readLine();
+                        lists.add(makeArticle(contents));
+                        cnt++;
+                        System.out.println(cnt);
+                    }
+
                 }
             }
-
         }
 //        System.out.println(strbuf.toString());
-        lists.add(article);
+        contents[arrindex] = new StringBuilder(inf);
+        lists.add(makeArticle(contents));
         return lists;
     }
 
+    /**
+     *根据数组元素生成article
+     * @param contents
+     * @return
+     */
+    private Article makeArticle(StringBuilder[] contents){
+        Article article = new Article();
+        article.setJournalInf(contents[0].toString());
+        article.setTitle(contents[1].toString());
+        article.setAuthors(contents[2].toString());
+        article.setAuthorsInf(contents[3]);
+        article.setArticleAbs(contents[4]);
+        article.setDoi(contents[5]);
+        article.setCois(contents[6]);
+        return article;
+    }
     /**
      * 生成excel文件
      */
